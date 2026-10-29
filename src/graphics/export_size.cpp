@@ -2,8 +2,8 @@
 
 #include <cmath>
 #include <cstddef>
+#include <expected>
 #include <limits>
-#include <optional>
 
 #include "png_writer.hpp"
 
@@ -16,11 +16,15 @@ constexpr float kInchInMillimeters = 25.4F;
 // within a workstation's memory.
 constexpr std::size_t kMaxImageBytes = std::size_t{1} << 32U;
 
-std::optional<std::size_t> SidePixels(float millimetres,
-                                      float dots_per_millimeter) {
+std::expected<std::size_t, ExportSizeError> SidePixels(
+    float millimetres, float dots_per_millimeter) {
   const float pixels = std::round(millimetres * dots_per_millimeter);
-  if (!export_size_detail::FitsSizeT(pixels) || pixels < 1.0F) {
-    return std::nullopt;
+  // Written as `!(>= 1)` so a NaN side counts as empty.
+  if (!(pixels >= 1.0F)) {
+    return std::unexpected(ExportSizeError::kEmptySide);
+  }
+  if (!export_size_detail::FitsSizeT(pixels)) {
+    return std::unexpected(ExportSizeError::kTooLarge);
   }
   return static_cast<std::size_t>(pixels);
 }
@@ -41,17 +45,22 @@ bool FitsSizeT(float value) {
 
 }  // namespace export_size_detail
 
-std::optional<ImageSize> ExportPixelSize(float width_mm, float height_mm,
-                                         float dpi) {
+std::expected<ImageSize, ExportSizeError> ExportPixelSize(float width_mm,
+                                                          float height_mm,
+                                                          float dpi) {
   const float dots_per_millimeter =
       export_size_detail::DotsPerInchToDotsPerMillimeter(dpi);
-  const std::optional<std::size_t> width =
-      SidePixels(width_mm, dots_per_millimeter);
-  const std::optional<std::size_t> height =
-      SidePixels(height_mm, dots_per_millimeter);
-  if (!width || !height || !png_io::FitsPngLimits(*width, *height) ||
+  const auto width = SidePixels(width_mm, dots_per_millimeter);
+  const auto height = SidePixels(height_mm, dots_per_millimeter);
+  if (!width) {
+    return std::unexpected(width.error());
+  }
+  if (!height) {
+    return std::unexpected(height.error());
+  }
+  if (!png_io::FitsPngLimits(*width, *height) ||
       *width * *height > kMaxImageBytes / png_io::kBytesPerPixel) {
-    return std::nullopt;
+    return std::unexpected(ExportSizeError::kTooLarge);
   }
   return ImageSize{.width = *width, .height = *height};
 }

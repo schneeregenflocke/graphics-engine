@@ -2,7 +2,8 @@
 #define EXPORT_SIZE_HPP
 
 #include <cstddef>
-#include <optional>
+#include <cstdint>
+#include <expected>
 
 // The pixel size of an export, apart from any GL, so a form can show what the
 // export will produce before anything gets rendered.
@@ -10,6 +11,10 @@ struct ImageSize {
   std::size_t width{0};
   std::size_t height{0};
 };
+
+// Why a page cannot become an image: a side rounds to no pixel at all (or is
+// no number), or the image outgrows the PNG format or the export's memory.
+enum class ExportSizeError : std::uint8_t { kEmptySide, kTooLarge };
 
 namespace export_size_detail {
 
@@ -29,11 +34,9 @@ namespace export_size_detail {
 }  // namespace export_size_detail
 
 // Each side rounds on its own, so the effective resolution differs slightly
-// per axis. Empty when a side would come out below one pixel, or the image
-// beyond what a PNG can hold or 4 GiB of RGBA.
-[[nodiscard]] std::optional<ImageSize> ExportPixelSize(float width_mm,
-                                                       float height_mm,
-                                                       float dpi);
+// per axis. The image may hold no more than a PNG can or 4 GiB of RGBA.
+[[nodiscard]] std::expected<ImageSize, ExportSizeError> ExportPixelSize(
+    float width_mm, float height_mm, float dpi);
 
 // The resolution a side really gets after rounding to whole pixels.
 [[nodiscard]] double EffectiveDpi(std::size_t pixels, float millimetres);

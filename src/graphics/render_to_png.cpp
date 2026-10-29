@@ -244,11 +244,15 @@ std::optional<std::string> WritePageToPng(const std::string& file_path,
                                           const RectF& ortho_region, float dpi,
                                           GraphicsEngine& graphics_engine,
                                           int msaa_samples) {
-  const std::optional<ImageSize> image_size =
+  const auto image_size =
       ExportPixelSize(ortho_region.Width(), ortho_region.Height(), dpi);
   if (!image_size) {
+    if (image_size.error() == ExportSizeError::kEmptySide) {
+      return std::format("The page of {} x {} mm has an empty side.",
+                         ortho_region.Width(), ortho_region.Height());
+    }
     return std::format(
-        "The image of {} x {} mm at {} dpi has an empty side or exceeds 4 GiB.",
+        "The image of {} x {} mm at {} dpi exceeds the export limit of 4 GiB.",
         ortho_region.Width(), ortho_region.Height(), dpi);
   }
 

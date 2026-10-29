@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
 
 #include <limits>
-#include <optional>
+#include <expected>
 
 #include "graphics/export_size.hpp"
 
 TEST(ExportSizeTest, A4LandscapeAt300DpiRoundsEachSide) {
-  const std::optional<ImageSize> size = ExportPixelSize(297.0F, 210.0F, 300.0F);
+  const auto size = ExportPixelSize(297.0F, 210.0F, 300.0F);
 
   ASSERT_TRUE(size.has_value());
   EXPECT_EQ(size->width, 3508U);
@@ -14,7 +14,7 @@ TEST(ExportSizeTest, A4LandscapeAt300DpiRoundsEachSide) {
 }
 
 TEST(ExportSizeTest, A4LandscapeAt200Dpi) {
-  const std::optional<ImageSize> size = ExportPixelSize(297.0F, 210.0F, 200.0F);
+  const auto size = ExportPixelSize(297.0F, 210.0F, 200.0F);
 
   ASSERT_TRUE(size.has_value());
   EXPECT_EQ(size->width, 2339U);
@@ -47,4 +47,14 @@ TEST(ExportSizeTest, BeyondTheMemoryBudgetHasNoSize) {
 
 TEST(ExportSizeTest, A4At2400DpiStaysWithinTheBudget) {
   EXPECT_TRUE(ExportPixelSize(297.0F, 210.0F, 2400.0F).has_value());
+}
+
+TEST(ExportSizeTest, AnEmptySideNamesItsReason) {
+  EXPECT_EQ(ExportPixelSize(0.0F, 210.0F, 300.0F).error(),
+            ExportSizeError::kEmptySide);
+}
+
+TEST(ExportSizeTest, ATooLargeImageNamesItsReason) {
+  EXPECT_EQ(ExportPixelSize(594.0F, 420.0F, 2400.0F).error(),
+            ExportSizeError::kTooLarge);
 }
