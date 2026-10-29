@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -16,8 +17,7 @@
 // One tile of the final image. The full picture is rendered in pieces because
 // a single FBO/texture is capped at kMaxTileSize (4096) per side; a 200-dpi
 // page easily exceeds that. `pixel_dimensions` is the tile's {width, height} in
-// pixels, `ortho_region` the slice of the orthographic world it maps to,
-// `pixels` the rendered RGBA bytes.
+// pixels, `ortho_region` the slice of the orthographic world it maps to.
 //
 // On MSAA at the seams (a question worth recording): the tiles do *not* overlap
 // and they must not. Each tile covers an integer-pixel region whose projection
@@ -32,11 +32,28 @@
 struct ImageTile {
   std::array<GLsizei, 2> pixel_dimensions{0, 0};  // {width, height} in pixels
   RectF ortho_region;                             // world-space slice it maps
-  std::vector<unsigned char> pixels;              // rendered RGBA bytes
 };
 
+namespace render_to_png_detail {
+
+struct TileOrigin {
+  std::size_t left{0};
+  std::size_t bottom{0};
+};
+
+// Copies `tile` as GL reads it back, bottom row first, into the top-left-origin
+// `image`, with the tile's bottom-left corner at `origin` counted from the
+// image's bottom-left corner. Flipping each tile on its way in spares the
+// whole image a second copy.
+void PlaceTileFlipped(std::span<unsigned char> image, ImageSize image_size,
+                      std::span<const unsigned char> tile, ImageSize tile_size,
+                      TileOrigin origin);
+
+}  // namespace render_to_png_detail
+
 // Renders a large orthographic scene into a grid of tiles and composes them
-// into a single top-left-origin RGBA image. The grid has `tile_columns` x
+// into a single top-left-origin RGBA image, one tile at a time, so no more than
+// one tile's pixels exist beside the image. The grid has `tile_columns` x
 // `tile_rows` tiles; every tile is kMaxTileSize wide/high except the last
 // column/row, which hold the leftover ("remainder") pixels.
 class ImageComposer {
@@ -71,10 +88,6 @@ class ImageComposer {
 
   void RenderTiles();
 
-  void ComposeTiles();
-
-  void VerticalFlip();
-
   size_t width_{0};
   size_t height_{0};
 
@@ -86,7 +99,6 @@ class ImageComposer {
 
   GraphicsEngine& graphics_engine_;
 
-  size_t bytes_per_pixel_{0};
   std::vector<unsigned char> image_;
 
   size_t tile_size_{0};

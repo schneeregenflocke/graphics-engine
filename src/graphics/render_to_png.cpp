@@ -11,6 +11,7 @@
 #include <glm/ext/vector_float3.hpp>
 #include <iostream>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -22,6 +23,26 @@
 #include "rect.hpp"
 #include "render_to_texture.hpp"
 
+namespace render_to_png_detail {
+
+void PlaceTileFlipped(std::span<unsigned char> image, ImageSize image_size,
+                      std::span<const unsigned char> tile, ImageSize tile_size,
+                      TileOrigin origin) {
+  const std::size_t image_row_bytes = image_size.width * png_io::kBytesPerPixel;
+  const std::size_t tile_row_bytes = tile_size.width * png_io::kBytesPerPixel;
+  const std::size_t left_bytes = origin.left * png_io::kBytesPerPixel;
+  for (std::size_t tile_row = 0; tile_row < tile_size.height; ++tile_row) {
+    const std::size_t image_row =
+        image_size.height - 1 - (origin.bottom + tile_row);
+    const auto source = tile.subspan(tile_row * tile_row_bytes, tile_row_bytes);
+    const auto destination = image.subspan(
+        (image_row * image_row_bytes) + left_bytes, tile_row_bytes);
+    std::ranges::copy(source, destination.begin());
+  }
+}
+
+}  // namespace render_to_png_detail
+
 ImageComposer::ImageComposer(ImageSize image_size, const RectF& ortho_region_in,
                              GraphicsEngine& graphics_engine_in,
                              int msaa_samples_in)
@@ -29,7 +50,6 @@ ImageComposer::ImageComposer(ImageSize image_size, const RectF& ortho_region_in,
       height_(image_size.height),
       ortho_region_(ortho_region_in),
       graphics_engine_(graphics_engine_in),
-      bytes_per_pixel_(kBytesPerPixel),
       tile_size_(kMaxTileSize),
       msaa_samples_(msaa_samples_in) {
   CalculatePixelRemainders();
@@ -39,11 +59,6 @@ ImageComposer::ImageComposer(ImageSize image_size, const RectF& ortho_region_in,
 
   ConfigureTiles();
   RenderTiles();
-  if (!rendered_) {
-    return;
-  }
-  ComposeTiles();
-  VerticalFlip();
 }
 
 bool ImageComposer::Rendered() const { return rendered_; }
@@ -152,6 +167,7 @@ void ImageComposer::ConfigureTiles() {
 void ImageComposer::RenderTiles() {
   MVP mvp;
   mvp.SetView(glm::translate(glm::mat4(1.0F), glm::vec3(0.0F, 0.0F, 0.0F)));
+  image_.resize(kBytesPerPixel * width_ * height_);
 
   for (size_t row = 0; row < TileRows(); ++row) {
     for (size_t column = 0; column < TileColumns(); ++column) {
@@ -164,6 +180,7 @@ void ImageComposer::RenderTiles() {
       // caller has to hear about it instead of writing the file.
       if (!render_texture.Valid()) {
         rendered_ = false;
+        image_ = {};
         return;
       }
       if (graphics_log::LogEnabled() && row == 0 && column == 0) {
@@ -181,64 +198,15 @@ void ImageComposer::RenderTiles() {
 
       render_texture.EndRender();
 
-      tile.pixels = render_texture.CopyImage();
+      const ImageSize tile_size{
+          .width = static_cast<size_t>(tile.pixel_dimensions[0]),
+          .height = static_cast<size_t>(tile.pixel_dimensions[1]),
+      };
+      render_to_png_detail::PlaceTileFlipped(
+          image_, {.width = width_, .height = height_},
+          render_texture.CopyImage(), tile_size,
+          {.left = column * tile_size_, .bottom = row * tile_size_});
     }
-  }
-}
-
-void ImageComposer::ComposeTiles() {
-  image_.resize(bytes_per_pixel_ * width_ * height_);
-
-  size_t dest_x = 0;
-  size_t dest_y = 0;
-
-  for (size_t row = 0; row < TileRows(); ++row) {
-    for (size_t column = 0; column < TileColumns(); ++column) {
-      auto& tile = TileAt(column, row);
-
-      const size_t dest_offset =
-          (dest_y * width_ * bytes_per_pixel_) + (dest_x * bytes_per_pixel_);
-
-      const auto tile_pixel_height =
-          static_cast<size_t>(tile.pixel_dimensions[1]);
-      for (size_t tile_row = 0; tile_row < tile_pixel_height; ++tile_row) {
-        const size_t tile_row_bytes =
-            static_cast<size_t>(tile.pixel_dimensions[0]) * bytes_per_pixel_;
-        const size_t src_begin = tile_row * tile_row_bytes;
-        const size_t src_end = src_begin + tile_row_bytes;
-
-        const auto dest_row_offset = static_cast<std::ptrdiff_t>(
-            dest_offset + (tile_row * width_ * bytes_per_pixel_));
-        const auto src_begin_offset = static_cast<std::ptrdiff_t>(src_begin);
-        const auto src_end_offset = static_cast<std::ptrdiff_t>(src_end);
-
-        std::copy(tile.pixels.cbegin() + src_begin_offset,
-                  tile.pixels.cbegin() + src_end_offset,
-                  image_.begin() + dest_row_offset);
-      }
-
-      dest_x += static_cast<std::size_t>(tile.pixel_dimensions[0]);
-    }
-
-    auto& first_tile_in_row = TileAt(0, row);
-    dest_x = 0;
-    dest_y += static_cast<std::size_t>(first_tile_in_row.pixel_dimensions[1]);
-  }
-}
-
-void ImageComposer::VerticalFlip() {
-  const std::vector<unsigned char> image_copy(image_);
-
-  for (size_t row = 0; row < height_; ++row) {
-    const size_t row_size = width_ * bytes_per_pixel_;
-    const size_t row_begin = row * row_size;
-    const size_t row_end = row_begin + row_size;
-
-    const auto row_begin_offset = static_cast<std::ptrdiff_t>(row_begin);
-    const auto row_end_offset = static_cast<std::ptrdiff_t>(row_end);
-    std::copy(image_copy.cbegin() + row_begin_offset,
-              image_copy.cbegin() + row_end_offset,
-              image_.end() - row_end_offset);
   }
 }
 

@@ -8,6 +8,7 @@ add_executable(graphics_engine_tests
 	graphics/test_png_writer.cpp
 	graphics/test_projection.cpp
 	graphics/test_rect.cpp
+	graphics/test_render_to_png.cpp
 	graphics/test_scene_graph.cpp
 	physics/test_physics_world.cpp
 )

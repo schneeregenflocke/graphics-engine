@@ -11,9 +11,9 @@ namespace {
 
 constexpr float kInchInMillimeters = 25.4F;
 
-// The export holds about three copies of the RGBA image at its peak
-// (schneeregenflocke/decade#114), so 4 GiB for one copy keeps the whole run
-// within a workstation's memory.
+// The export holds the whole RGBA image, plus one tile, before libpng sees it
+// (schneeregenflocke/decade#114); 4 GiB keeps that within a workstation's
+// memory.
 constexpr std::size_t kMaxImageBytes = std::size_t{1} << 32U;
 
 std::expected<std::size_t, ExportSizeError> SidePixels(
