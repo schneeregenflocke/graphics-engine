@@ -50,7 +50,7 @@ class ImageComposer {
 
   ImageTile& TileAt(size_t column, size_t row);
 
-  [[nodiscard]] std::vector<unsigned char> CopyImage() const;
+  [[nodiscard]] const std::vector<unsigned char>& Image() const;
 
   [[nodiscard]] size_t TileCount() const;
 

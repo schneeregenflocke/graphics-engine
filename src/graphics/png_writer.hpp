@@ -2,7 +2,7 @@
 #define PNG_WRITER_HPP
 
 #include <cstddef>
-#include <vector>
+#include <span>
 
 // Infrastructure: writes RGBA8 pixel buffers to PNG files via libpng.
 //
@@ -11,9 +11,9 @@
 // setjmp/longjmp, and a longjmp does *not* run C++ destructors as it unwinds —
 // per [csetjmp] it is undefined behaviour if the jump would skip a non-trivial
 // destructor. The unit respects that by constructing every object with a
-// non-trivial destructor (the FILE owner, the row-pointer vector) *before* the
-// setjmp, so the jump can never bypass their cleanup. Raw stdio ownership is
-// expressed with gsl::owner so the static analysis can verify it.
+// non-trivial destructor (the FILE owner) *before* the setjmp, so the jump can
+// never bypass their cleanup. Raw stdio ownership is expressed with gsl::owner
+// so the static analysis can verify it.
 namespace png_io {
 
 struct PngImageSize {
@@ -29,7 +29,7 @@ inline constexpr std::size_t kBytesPerPixel = 4;
 
 // Writes the RGBA8 `pixels` (row-major, top-left origin) to `file_name`.
 // Returns false if the file cannot be opened or libpng signals an error.
-bool WriteRgbaPng(const char* file_name, std::vector<unsigned char>& pixels,
+bool WriteRgbaPng(const char* file_name, std::span<const unsigned char> pixels,
                   PngImageSize size);
 
 }  // namespace png_io

@@ -52,7 +52,9 @@ ImageTile& ImageComposer::TileAt(size_t column, size_t row) {
   return tiles_[column + (row * tile_columns_)];
 }
 
-std::vector<unsigned char> ImageComposer::CopyImage() const { return image_; }
+const std::vector<unsigned char>& ImageComposer::Image() const {
+  return image_;
+}
 
 size_t ImageComposer::TileCount() const { return tiles_.size(); }
 
@@ -261,12 +263,11 @@ std::optional<std::string> WritePageToPng(const std::string& file_path,
   if (!composer.Rendered()) {
     return "The off-screen framebuffer did not come up; nothing written.";
   }
-  auto pixels = composer.CopyImage();
   const png_io::PngImageSize png_size{
       .width = image_size->width,
       .height = image_size->height,
   };
-  if (!png_io::WriteRgbaPng(file_path.c_str(), pixels, png_size)) {
+  if (!png_io::WriteRgbaPng(file_path.c_str(), composer.Image(), png_size)) {
     return "Writing " + file_path + " failed.";
   }
   return std::nullopt;

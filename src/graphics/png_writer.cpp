@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <gsl/pointers>
 #include <memory>
-#include <vector>
+#include <span>
 
 extern "C" {
 #include <png.h>
@@ -53,7 +53,7 @@ bool FitsPngLimits(std::size_t width, std::size_t height) {
          width <= max_width_by_address;
 }
 
-bool WriteRgbaPng(const char* file_name, std::vector<unsigned char>& pixels,
+bool WriteRgbaPng(const char* file_name, std::span<const unsigned char> pixels,
                   PngImageSize size) {
   // see https://sourceforge.net/p/libpng/code/ci/master/tree/example.c#l739
 
@@ -72,14 +72,6 @@ bool WriteRgbaPng(const char* file_name, std::vector<unsigned char>& pixels,
   if (info == nullptr) {
     png_destroy_write_struct(&png, nullptr);
     return false;
-  }
-
-  // Built before the setjmp: row pointers into `pixels`, indexed (not pointer
-  // arithmetic) so the bounds-safety check is satisfied and the vector's
-  // destructor is never skipped by a longjmp.
-  std::vector<png_bytep> row_pointers(size.height);
-  for (std::size_t row = 0; row < size.height; ++row) {
-    row_pointers[row] = &pixels[row * size.width * kBytesPerPixel];
   }
 
   // The one construct libpng's contract forces on us and that has no in-code
@@ -101,8 +93,11 @@ bool WriteRgbaPng(const char* file_name, std::vector<unsigned char>& pixels,
                PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
   png_write_info(png, info);
 
+  // png_write_row reads through a const pointer, so the caller's image stays
+  // untouched and needs no copy; png_write_rows would want writable rows.
+  const std::size_t row_bytes = size.width * kBytesPerPixel;
   for (std::size_t row = 0; row < size.height; ++row) {
-    png_write_rows(png, &row_pointers[row], 1);
+    png_write_row(png, pixels.subspan(row * row_bytes, row_bytes).data());
   }
 
   png_write_end(png, info);
