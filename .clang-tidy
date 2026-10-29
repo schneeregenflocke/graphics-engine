@@ -89,4 +89,3 @@ CheckOptions:
   readability-identifier-naming.PrivateMemberSuffix: "_"
   readability-identifier-naming.ProtectedMemberCase: lower_case
   readability-identifier-naming.ProtectedMemberSuffix: "_"
----
