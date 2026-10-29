@@ -68,3 +68,18 @@ TEST(WritePngTest, WritesTheImageAndForwardsTheRows) {
   EXPECT_TRUE(std::filesystem::exists(file));
   std::filesystem::remove(file);
 }
+
+// A stopped export leaves no half image behind that looks like a finished one.
+TEST(WritePngTest, AnUnfinishedFileGoesAway) {
+  const auto file =
+      std::filesystem::temp_directory_path() / "write_png_unfinished.png";
+  const RgbaImage image{
+      .size = {.width = 2, .height = 3},
+      .pixels = Image({{1, 2}, {3, 4}, {5, 6}}),
+  };
+
+  const auto error = WritePng(file, image, [](std::size_t) { return false; });
+
+  EXPECT_NE(error, std::nullopt);
+  EXPECT_FALSE(std::filesystem::exists(file));
+}

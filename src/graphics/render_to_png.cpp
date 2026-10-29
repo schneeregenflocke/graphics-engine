@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <expected>
+#include <filesystem>
 #include <format>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_float4x4.hpp>
@@ -14,6 +15,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -249,6 +251,10 @@ std::optional<std::string> WritePng(const std::string& file_path,
   };
   if (!png_io::WriteRgbaPng(file_path.c_str(), image.pixels, png_size,
                             progress)) {
+    // What got written stops mid-image, which no viewer tells from a finished
+    // file at a glance.
+    std::error_code ignored;
+    std::filesystem::remove(file_path, ignored);
     return "Writing " + file_path + " failed.";
   }
   return std::nullopt;
