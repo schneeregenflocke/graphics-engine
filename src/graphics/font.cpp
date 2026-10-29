@@ -78,7 +78,8 @@ std::size_t Font::IndexAtOffset(const std::u32string& text, float size,
 
 float Font::TextHeight(float size) const {
   constexpr std::array<std::array<char32_t, 2>, 3> kCharIntervals = {
-      {{'0', '9'}, {'A', 'Z'}, {'a', 'z'}}};
+      {{'0', '9'}, {'A', 'Z'}, {'a', 'z'}},
+  };
 
   float height = 0.0F;
   for (const auto& char_interval : kCharIntervals) {

@@ -82,7 +82,8 @@ std::optional<RectF> SceneNode::WorldBounds(
                         glm::vec4(bounds.Left(), bounds.Bottom(), 0.0F, 1.0F),
                         glm::vec4(bounds.Right(), bounds.Bottom(), 0.0F, 1.0F),
                         glm::vec4(bounds.Left(), bounds.Top(), 0.0F, 1.0F),
-                        glm::vec4(bounds.Right(), bounds.Top(), 0.0F, 1.0F)};
+                        glm::vec4(bounds.Right(), bounds.Top(), 0.0F, 1.0F),
+                    };
                     for (const auto& corner : corners) {
                       const glm::vec4 world_corner = world * corner;
                       min_x = std::min(min_x, world_corner.x);
@@ -122,9 +123,11 @@ void SceneNode::Draw(const glm::mat4& parent_world) {
                     if (node.shape_ == nullptr) {
                       return;
                     }
-                    draw_calls.push_back({.shape = node.shape_.get(),
-                                          .world = world,
-                                          .layer = node.draw_layer_});
+                    draw_calls.push_back({
+                        .shape = node.shape_.get(),
+                        .world = world,
+                        .layer = node.draw_layer_,
+                    });
                   });
 
   std::ranges::stable_sort(draw_calls,
@@ -153,8 +156,10 @@ std::optional<std::string> FindNodePath(const SceneNode& root,
       return current.path;
     }
     for (const auto& child : current.node->GetChildren()) {
-      stack.push_back({.node = child.get(),
-                       .path = current.path + '/' + child->GetNodeName()});
+      stack.push_back({
+          .node = child.get(),
+          .path = current.path + '/' + child->GetNodeName(),
+      });
     }
   }
 

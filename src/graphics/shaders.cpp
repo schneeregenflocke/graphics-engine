@@ -79,7 +79,8 @@ void Shader::CompileProgram(const ShaderSources& sources) {
       .vertex = CompileShader(sources.vertex, GL_VERTEX_SHADER,
                               name_ + " vertex shader"),
       .fragment = CompileShader(sources.fragment, GL_FRAGMENT_SHADER,
-                                name_ + " fragment shader")};
+                                name_ + " fragment shader"),
+  };
 
   LinkShaders(handles);
 }
@@ -166,17 +167,20 @@ Shaders::Shaders() {
   shaders_.emplace_back(
       Shader::ShaderSources{
           .vertex = std::string(resources::kSimpleVertexShader),
-          .fragment = std::string(resources::kSimpleFragmentShader)},
+          .fragment = std::string(resources::kSimpleFragmentShader),
+      },
       "Simple Shader");
   shaders_.emplace_back(
       Shader::ShaderSources{
           .vertex = std::string(resources::kRectanglesVertexShader),
-          .fragment = std::string(resources::kRectanglesFragmentShader)},
+          .fragment = std::string(resources::kRectanglesFragmentShader),
+      },
       "Rectangles Shader");
   shaders_.emplace_back(
       Shader::ShaderSources{
           .vertex = std::string(resources::kFontVertexShader),
-          .fragment = std::string(resources::kFontFragmentShader)},
+          .fragment = std::string(resources::kFontFragmentShader),
+      },
       "Font Shader");
   PrintInfo();
 }

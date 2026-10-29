@@ -113,8 +113,10 @@ class SceneNode {
       stack.pop_back();
       visit(*current.node, current.world);
       for (const auto& child : std::views::reverse(current.node->children_)) {
-        stack.push_back({.node = child.get(),
-                         .world = current.world * child->model_matrix_});
+        stack.push_back({
+            .node = child.get(),
+            .world = current.world * child->model_matrix_,
+        });
       }
     }
   }

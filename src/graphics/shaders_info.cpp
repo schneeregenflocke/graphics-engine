@@ -165,7 +165,10 @@ void ShaderInfos::GatherAttributesInfo() {
         ShaderInfo::InfoType::ActiveAttribute,
         std::string(attrib_name.data(), static_cast<size_t>(written)),
         ShaderInfo::InfoParams{
-            .location = location, .size = size, .type = type});
+            .location = location,
+            .size = size,
+            .type = type,
+        });
   }
 
   SortAttributesInfo();
@@ -194,7 +197,10 @@ void ShaderInfos::GatherUniformsInfo() {
         ShaderInfo::InfoType::ActiveUniform,
         std::string(uniform_name.data(), static_cast<size_t>(written)),
         ShaderInfo::InfoParams{
-            .location = location, .size = size, .type = type});
+            .location = location,
+            .size = size,
+            .type = type,
+        });
   }
 
   SortUniformsInfo();
