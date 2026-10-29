@@ -24,8 +24,9 @@ struct PngImageSize {
 
 inline constexpr std::size_t kBytesPerPixel = 4;
 
-// True if a width x height RGBA image stays within PNG's format and addressing
-// limits. Anything larger cannot be written and must be rejected by the caller.
+// True if libpng accepts a width x height image: no empty side, at most
+// 2^31 - 1 pixels per side by the format, and at most the build's user limit,
+// 1000000 per side with the default pnglibconf.h.
 [[nodiscard]] bool FitsPngLimits(std::size_t width, std::size_t height);
 
 // Hears after every row how many rows are written so far, and answers whether

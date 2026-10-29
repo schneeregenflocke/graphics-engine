@@ -226,7 +226,7 @@ std::expected<RgbaImage, std::string> RenderPage(
                       ortho_region.Width(), ortho_region.Height()));
     }
     return std::unexpected(std::format(
-        "The image of {} x {} mm at {} dpi exceeds the export limit of 4 GiB.",
+        "The image of {} x {} mm at {} dpi exceeds what libpng writes.",
         ortho_region.Width(), ortho_region.Height(), dpi));
   }
 

@@ -13,7 +13,7 @@ struct ImageSize {
 };
 
 // Why a page cannot become an image: a side rounds to no pixel at all (or is
-// no number), or the image outgrows the PNG format or the export's memory.
+// no number), or the image outgrows what libpng writes.
 enum class ExportSizeError : std::uint8_t { kEmptySide, kTooLarge };
 
 namespace export_size_detail {
@@ -34,7 +34,8 @@ namespace export_size_detail {
 }  // namespace export_size_detail
 
 // Each side rounds on its own, so the effective resolution differs slightly
-// per axis. The image may hold no more than a PNG can or 4 GiB of RGBA.
+// per axis. The image may hold no more than libpng writes; memory sets no
+// bound here.
 [[nodiscard]] std::expected<ImageSize, ExportSizeError> ExportPixelSize(
     float width_mm, float height_mm, float dpi);
 

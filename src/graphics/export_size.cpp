@@ -11,11 +11,6 @@ namespace {
 
 constexpr float kInchInMillimeters = 25.4F;
 
-// The export holds the whole RGBA image, plus one tile, before libpng sees it
-// (schneeregenflocke/decade#114); 4 GiB keeps that within a workstation's
-// memory.
-constexpr std::size_t kMaxImageBytes = std::size_t{1} << 32U;
-
 std::expected<std::size_t, ExportSizeError> SidePixels(
     float millimetres, float dots_per_millimeter) {
   const float pixels = std::round(millimetres * dots_per_millimeter);
@@ -58,8 +53,7 @@ std::expected<ImageSize, ExportSizeError> ExportPixelSize(float width_mm,
   if (!height) {
     return std::unexpected(height.error());
   }
-  if (!png_io::FitsPngLimits(*width, *height) ||
-      *width * *height > kMaxImageBytes / png_io::kBytesPerPixel) {
+  if (!png_io::FitsPngLimits(*width, *height)) {
     return std::unexpected(ExportSizeError::kTooLarge);
   }
   return ImageSize{.width = *width, .height = *height};

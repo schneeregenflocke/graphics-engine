@@ -8,6 +8,7 @@
 
 extern "C" {
 #include <png.h>
+#include <pnglibconf.h>
 #include <setjmp.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -40,17 +41,17 @@ using UniqueFile = std::unique_ptr<std::FILE, FileCloser>;
 
 }  // namespace
 
+// The width and height tests of libpng's png_check_IHDR, which png_set_IHDR
+// runs on writing as on reading. The user limits stay at libpng's build-time
+// default, since nothing here calls png_set_user_limits.
 bool FitsPngLimits(std::size_t width, std::size_t height) {
-  if (width == 0 || height == 0) {
-    return false;
-  }
-  const std::size_t max_height_by_format = PNG_UINT_32_MAX / sizeof(png_bytep);
-  const std::size_t max_height_by_address =
-      PNG_SIZE_MAX / (width * kBytesPerPixel);
-  const std::size_t max_width_by_address =
-      PNG_SIZE_MAX / (height * kBytesPerPixel);
-  return height <= max_height_by_format && height <= max_height_by_address &&
-         width <= max_width_by_address;
+  // libpng's bound term by term: its row buffer margin of 48 bytes, the filter
+  // byte, pixels of up to 8 bytes and one pixel of padding.
+  constexpr std::size_t kMaxPaddedWidth = ((PNG_SIZE_MAX - 48 - 1) / 8) - 1;
+  const std::size_t padded_width = (width + 7) & ~std::size_t{7};
+  return width > 0 && height > 0 && width <= PNG_UINT_31_MAX &&
+         height <= PNG_UINT_31_MAX && padded_width <= kMaxPaddedWidth &&
+         width <= PNG_USER_WIDTH_MAX && height <= PNG_USER_HEIGHT_MAX;
 }
 
 bool WriteRgbaPng(const char* file_name, std::span<const unsigned char> pixels,

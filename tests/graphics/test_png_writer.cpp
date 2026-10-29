@@ -77,3 +77,32 @@ TEST(PngWriterTest, AnObserverSayingStopAbandonsTheFile) {
                                     [](std::size_t) { return false; }));
   std::filesystem::remove(file);
 }
+
+// libpng's png_check_IHDR refuses a side beyond PNG_USER_WIDTH_MAX and
+// PNG_USER_HEIGHT_MAX, 1000000 in pnglibconf.h, on writing as on reading.
+TEST(PngWriterTest, LibpngWritesARowAtItsUserWidthLimit) {
+  const auto file = TempPng("png_writer_width_limit.png");
+  const std::vector<unsigned char> row(std::size_t{1000000} *
+                                       png_io::kBytesPerPixel);
+
+  EXPECT_TRUE(png_io::WriteRgbaPng(file.c_str(), std::span(row),
+                                   {.width = 1000000, .height = 1}));
+  std::filesystem::remove(file);
+}
+
+TEST(PngWriterTest, LibpngRefusesARowBeyondItsUserWidthLimit) {
+  const auto file = TempPng("png_writer_beyond_width_limit.png");
+  const std::vector<unsigned char> row(std::size_t{1000001} *
+                                       png_io::kBytesPerPixel);
+
+  EXPECT_FALSE(png_io::WriteRgbaPng(file.c_str(), std::span(row),
+                                    {.width = 1000001, .height = 1}));
+  std::filesystem::remove(file);
+}
+
+TEST(PngWriterTest, FitsPngLimitsFollowsLibpngsUserLimits) {
+  EXPECT_TRUE(png_io::FitsPngLimits(1000000, 1000000));
+  EXPECT_FALSE(png_io::FitsPngLimits(1000001, 1));
+  EXPECT_FALSE(png_io::FitsPngLimits(1, 1000001));
+  EXPECT_FALSE(png_io::FitsPngLimits(0, 1));
+}
