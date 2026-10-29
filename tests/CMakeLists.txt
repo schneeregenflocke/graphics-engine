@@ -2,6 +2,7 @@ find_package(GTest REQUIRED)
 
 add_executable(graphics_engine_tests
 	graphics/test_child_pool.cpp
+	graphics/test_export_size.cpp
 	graphics/test_frame_stats.cpp
 	graphics/test_pan_zoom_camera.cpp
 	graphics/test_projection.cpp

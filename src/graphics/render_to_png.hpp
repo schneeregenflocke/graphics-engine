@@ -5,9 +5,11 @@
 
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "export_size.hpp"
 #include "graphics_engine.hpp"
 #include "rect.hpp"
 
@@ -31,11 +33,6 @@ struct ImageTile {
   std::array<GLsizei, 2> pixel_dimensions{0, 0};  // {width, height} in pixels
   RectF ortho_region;                             // world-space slice it maps
   std::vector<unsigned char> pixels;              // rendered RGBA bytes
-};
-
-struct ImageSize {
-  size_t width{0};
-  size_t height{0};
 };
 
 // Renders a large orthographic scene into a grid of tiles and composes them
@@ -106,28 +103,11 @@ class ImageComposer {
   static constexpr size_t kMaxTileSize = 4096;
 };
 
-namespace render_to_png_detail {
-
-[[nodiscard]] float DotsPerInchToDotsPerMillimeter(float dpi);
-
-// Whether `value` survives a static_cast to size_t. That cast is undefined for
-// anything outside the target's range, so the range gets tested while the value
-// is still a float — FitsPngLimits sees the number after the cast and therefore
-// too late. The page size comes out of a project file unvalidated
-// (`value_serialization.hpp`, no clamp in `SetSize`), so an absurd extent times
-// the dpi does reach here.
-//
-// 2^64 is the first value a 64-bit size_t cannot hold; NaN fails the lower
-// test, which is the point of writing it as `>= 0` rather than `!(< 0)`.
-[[nodiscard]] bool FitsSizeT(float value);
-
-}  // namespace render_to_png_detail
-
 // Draws the calendar page as a PNG at the wanted resolution. It converts the
 // page's millimetre extent into a pixel size through the dpi, has ImageComposer
-// render it in tiles and png_io write it. It does nothing when the image size
-// bursts the PNG limits.
-void WritePageToPng(const std::string& file_path, const RectF& ortho_region,
-                    float dpi, GraphicsEngine& graphics_engine,
-                    int msaa_samples);
+// render it in tiles and png_io write it. The return: empty on success,
+// otherwise the display-ready reason nothing got written.
+[[nodiscard]] std::optional<std::string> WritePageToPng(
+    const std::string& file_path, const RectF& ortho_region, float dpi,
+    GraphicsEngine& graphics_engine, int msaa_samples);
 #endif  // RENDER_TO_PNG_HPP

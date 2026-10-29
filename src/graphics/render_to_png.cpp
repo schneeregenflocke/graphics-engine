@@ -3,17 +3,18 @@
 #include <epoxy/gl.h>
 
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
+#include <format>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <iostream>
-#include <limits>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "export_size.hpp"
 #include "graphics_engine.hpp"
 #include "graphics_log.hpp"
 #include "mvp_matrices.hpp"
@@ -239,52 +240,30 @@ void ImageComposer::VerticalFlip() {
   }
 }
 
-namespace render_to_png_detail {
-
-float DotsPerInchToDotsPerMillimeter(float dpi) {
-  constexpr float kInchInMillimeters = 25.4F;
-  return dpi / kInchInMillimeters;
-}
-
-bool FitsSizeT(float value) {
-  const float limit =
-      std::ldexp(1.0F, std::numeric_limits<std::size_t>::digits);
-  return value >= 0.0F && value < limit;
-}
-
-}  // namespace render_to_png_detail
-
-void WritePageToPng(const std::string& file_path, const RectF& ortho_region,
-                    float dpi, GraphicsEngine& graphics_engine,
-                    int msaa_samples) {
-  const float dots_per_millimeter =
-      render_to_png_detail::DotsPerInchToDotsPerMillimeter(dpi);
-  const float width_pixels =
-      std::round(ortho_region.Width() * dots_per_millimeter);
-  const float height_pixels =
-      std::round(ortho_region.Height() * dots_per_millimeter);
-  if (!render_to_png_detail::FitsSizeT(width_pixels) ||
-      !render_to_png_detail::FitsSizeT(height_pixels)) {
-    return;
+std::optional<std::string> WritePageToPng(const std::string& file_path,
+                                          const RectF& ortho_region, float dpi,
+                                          GraphicsEngine& graphics_engine,
+                                          int msaa_samples) {
+  const std::optional<ImageSize> image_size =
+      ExportPixelSize(ortho_region.Width(), ortho_region.Height(), dpi);
+  if (!image_size) {
+    return std::format(
+        "The image of {} x {} mm at {} dpi exceeds the PNG size limits.",
+        ortho_region.Width(), ortho_region.Height(), dpi);
   }
 
-  const auto image_width = static_cast<size_t>(width_pixels);
-  const auto image_height = static_cast<size_t>(height_pixels);
-
-  if (!png_io::FitsPngLimits(image_width, image_height)) {
-    return;
-  }
-
-  const ImageComposer composer(
-      ImageSize{.width = image_width, .height = image_height}, ortho_region,
-      graphics_engine, msaa_samples);
+  const ImageComposer composer(*image_size, ortho_region, graphics_engine,
+                               msaa_samples);
   if (!composer.Rendered()) {
-    std::cerr << "--dump-png: the off-screen framebuffer would not come up; "
-                 "nothing written\n";
-    return;
+    return "The off-screen framebuffer did not come up; nothing written.";
   }
   auto pixels = composer.CopyImage();
-  png_io::WriteRgbaPng(
-      file_path.c_str(), pixels,
-      png_io::PngImageSize{.width = image_width, .height = image_height});
+  const png_io::PngImageSize png_size{
+      .width = image_size->width,
+      .height = image_size->height,
+  };
+  if (!png_io::WriteRgbaPng(file_path.c_str(), pixels, png_size)) {
+    return "Writing " + file_path + " failed.";
+  }
+  return std::nullopt;
 }
