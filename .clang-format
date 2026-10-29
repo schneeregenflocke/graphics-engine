@@ -1,0 +1,13 @@
+---
+# Google style, unchanged — the naming rules in AGENTS.md follow it too.
+#
+# This file was a full `--dump-config` and carried not one deviation from the
+# base style. That is not merely long, it breaks: a dump names every option of
+# the version that wrote it, so an older clang-format aborts on the first key it
+# does not know ("unknown key") and formats by the LLVM default instead. The
+# CI container (Ubuntu 26.04, clang-format 21) fell over exactly that way.
+#
+# Whoever adds a deviation writes that one line here — never a dump.
+Language: Cpp
+BasedOnStyle: Google
+...

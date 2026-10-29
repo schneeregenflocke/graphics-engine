@@ -1,0 +1,65 @@
+# CI on forgejo.blem.ch (the mirror github-mirror/graphics-engine), shaped like
+# decade's: GCC carries the format and sanitizer gates, clang carries
+# clang-tidy. `runner-laptop-omen` keeps the C++ build off homelab.
+name: build
+on:
+  push:
+    branches: [main]
+
+# The dependency list stands in both jobs because it gets installed BEFORE the
+# checkout: actions/checkout is a JS action and needs node and git in the bare
+# container, so no file from the repository can carry the list yet.
+jobs:
+  gcc:
+    runs-on: runner-laptop-omen
+    container:
+      image: ubuntu:26.04
+    steps:
+      - name: Toolchain and dependencies
+        run: |
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+            nodejs git cmake ninja-build pkg-config g++ clang-format \
+            libepoxy-dev libpng-dev libfreetype-dev libicu-dev \
+            libglm-dev libmsgsl-dev libgtest-dev
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: clang-format gate
+        run: |
+          git ls-files '*.hpp' '*.cpp' | grep -v '^external/' \
+            | xargs clang-format --dry-run -Werror
+      - name: Configure
+        run: cmake -S . -B build -G Ninja
+      - name: Build
+        run: ninja -C build
+      - name: Tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Sanitizer gate (address, leak, undefined, float checks)
+        run: cmake --build build --target sanitize-address
+
+  clang:
+    runs-on: runner-laptop-omen
+    container:
+      image: ubuntu:26.04
+    steps:
+      - name: Toolchain and dependencies
+        run: |
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+            nodejs git cmake ninja-build pkg-config clang-22 clang-tidy-22 \
+            libepoxy-dev libpng-dev libfreetype-dev libicu-dev \
+            libglm-dev libmsgsl-dev libgtest-dev
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      # Versioned, not the `clang` metapackage: that one points at 21 on
+      # ubuntu:26.04, whose clang-tidy carries a false positive 22 has fixed.
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=clang-22 -DCMAKE_CXX_COMPILER=clang++-22
+      - name: Build
+        run: ninja -C build
+      - name: Tests
+        run: ctest --test-dir build --output-on-failure
+      - name: clang-tidy gate
+        run: cmake --build build --target clang-tidy
