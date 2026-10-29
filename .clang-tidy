@@ -40,6 +40,9 @@ Checks:
   # for a translation-unit-local function, the other the anonymous namespace.
   # Google style (in force here) uses the anonymous namespace, so this one goes.
   - -llvm-prefer-static-over-anonymous-namespace
+  # Rewrites std algorithms into llvm::find and its kin from LLVM's own
+  # llvm/ADT/STLExtras.h, a library this project does not have.
+  - -llvm-use-ranges
   - misc-*
   - modernize-*
   - -modernize-use-trailing-return-type
