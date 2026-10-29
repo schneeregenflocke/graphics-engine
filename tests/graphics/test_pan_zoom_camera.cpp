@@ -140,3 +140,19 @@ TEST(ComputeZoomLimitsTest, LetterboxedViewportStopsWhenBothAxesShowTwoPages) {
       kPageHeight * kViewScale / limits.min_scale / kPageHeight;
   EXPECT_NEAR(visible_pages_high, 2.25F, 1e-4F);
 }
+
+// A consumer that narrows the limits snaps the current zoom in with a factor
+// of one; the anchor stays where it was.
+TEST(PanZoomCameraTest, ZoomByOneSnapsIntoNarrowedLimits) {
+  PanZoomCamera camera;
+  camera.SetScaleLimits({.min_scale = 0.5F, .max_scale = 8.0F});
+  const glm::vec3 anchor{3.0F, 8.0F, 0.0F};
+  camera.ZoomAround(anchor, 8.0F);
+  const glm::vec3 page_before = camera.PagePos(anchor);
+
+  camera.SetScaleLimits({.min_scale = 0.5F, .max_scale = 2.0F});
+  camera.ZoomAround(anchor, 1.0F);
+
+  EXPECT_NEAR(camera.ScaleFactor(), 2.0F, 1e-6F);
+  ExpectNearVec3(camera.PagePos(anchor), page_before, 1e-4F);
+}
