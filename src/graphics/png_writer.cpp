@@ -54,7 +54,7 @@ bool FitsPngLimits(std::size_t width, std::size_t height) {
 }
 
 bool WriteRgbaPng(const char* file_name, std::span<const unsigned char> pixels,
-                  PngImageSize size) {
+                  PngImageSize size, const RowProgress& progress) {
   // see https://sourceforge.net/p/libpng/code/ci/master/tree/example.c#l739
 
   const UniqueFile file(OpenForWrite(file_name));
@@ -98,6 +98,10 @@ bool WriteRgbaPng(const char* file_name, std::span<const unsigned char> pixels,
   const std::size_t row_bytes = size.width * kBytesPerPixel;
   for (std::size_t row = 0; row < size.height; ++row) {
     png_write_row(png, pixels.subspan(row * row_bytes, row_bytes).data());
+    if (progress && !progress(row + 1)) {
+      png_destroy_write_struct(&png, &info);
+      return false;
+    }
   }
 
   png_write_end(png, info);

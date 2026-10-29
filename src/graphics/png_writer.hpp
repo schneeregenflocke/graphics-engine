@@ -2,6 +2,7 @@
 #define PNG_WRITER_HPP
 
 #include <cstddef>
+#include <functional>
 #include <span>
 
 // Infrastructure: writes RGBA8 pixel buffers to PNG files via libpng.
@@ -27,10 +28,16 @@ inline constexpr std::size_t kBytesPerPixel = 4;
 // limits. Anything larger cannot be written and must be rejected by the caller.
 [[nodiscard]] bool FitsPngLimits(std::size_t width, std::size_t height);
 
+// Hears after every row how many rows are written so far, and answers whether
+// to go on; false abandons the file. It must not throw: it runs between
+// libpng's setjmp and the rows it guards.
+using RowProgress = std::function<bool(std::size_t rows_written)>;
+
 // Writes the RGBA8 `pixels` (row-major, top-left origin) to `file_name`.
-// Returns false if the file cannot be opened or libpng signals an error.
+// Returns false if the file cannot be opened, libpng signals an error or
+// `progress` asks to stop.
 bool WriteRgbaPng(const char* file_name, std::span<const unsigned char> pixels,
-                  PngImageSize size);
+                  PngImageSize size, const RowProgress& progress = {});
 
 }  // namespace png_io
 

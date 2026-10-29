@@ -51,3 +51,29 @@ TEST(PngWriterTest, WritesTheRowsTopDownAsGiven) {
   EXPECT_EQ(ReadRgba(file), pixels);
   std::filesystem::remove(file);
 }
+
+TEST(PngWriterTest, ReportsEveryWrittenRow) {
+  const auto file = TempPng("png_writer_progress.png");
+  const std::vector<unsigned char> pixels = TwoRows();
+  std::vector<std::size_t> reported;
+
+  ASSERT_TRUE(png_io::WriteRgbaPng(file.c_str(), std::span(pixels),
+                                   {.width = 3, .height = 2},
+                                   [&reported](std::size_t rows_written) {
+                                     reported.push_back(rows_written);
+                                     return true;
+                                   }));
+
+  EXPECT_EQ(reported, (std::vector<std::size_t>{1, 2}));
+  std::filesystem::remove(file);
+}
+
+TEST(PngWriterTest, AnObserverSayingStopAbandonsTheFile) {
+  const auto file = TempPng("png_writer_abandoned.png");
+  const std::vector<unsigned char> pixels = TwoRows();
+
+  EXPECT_FALSE(png_io::WriteRgbaPng(file.c_str(), std::span(pixels),
+                                    {.width = 3, .height = 2},
+                                    [](std::size_t) { return false; }));
+  std::filesystem::remove(file);
+}
