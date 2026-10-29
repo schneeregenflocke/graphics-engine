@@ -248,7 +248,7 @@ std::optional<std::string> WritePageToPng(const std::string& file_path,
       ExportPixelSize(ortho_region.Width(), ortho_region.Height(), dpi);
   if (!image_size) {
     return std::format(
-        "The image of {} x {} mm at {} dpi exceeds the PNG size limits.",
+        "The image of {} x {} mm at {} dpi has an empty side or exceeds 4 GiB.",
         ortho_region.Width(), ortho_region.Height(), dpi);
   }
 

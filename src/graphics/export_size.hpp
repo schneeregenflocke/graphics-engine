@@ -29,8 +29,8 @@ namespace export_size_detail {
 }  // namespace export_size_detail
 
 // Each side rounds on its own, so the effective resolution differs slightly
-// per axis. Empty when a side would come out below one pixel or beyond what a
-// PNG can hold.
+// per axis. Empty when a side would come out below one pixel, or the image
+// beyond what a PNG can hold or 4 GiB of RGBA.
 [[nodiscard]] std::optional<ImageSize> ExportPixelSize(float width_mm,
                                                        float height_mm,
                                                        float dpi);

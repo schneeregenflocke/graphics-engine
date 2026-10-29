@@ -39,3 +39,12 @@ TEST(ExportSizeTest, EffectiveDpiFollowsTheRoundedPixels) {
   EXPECT_NEAR(EffectiveDpi(3508U, 297.0F), 300.0108, 1e-3);
   EXPECT_NEAR(EffectiveDpi(2480U, 210.0F), 299.9619, 1e-3);
 }
+
+// A2 at 2400 dpi is about 9 GB of RGBA; the export would hold three copies.
+TEST(ExportSizeTest, BeyondTheMemoryBudgetHasNoSize) {
+  EXPECT_FALSE(ExportPixelSize(594.0F, 420.0F, 2400.0F).has_value());
+}
+
+TEST(ExportSizeTest, A4At2400DpiStaysWithinTheBudget) {
+  EXPECT_TRUE(ExportPixelSize(297.0F, 210.0F, 2400.0F).has_value());
+}
