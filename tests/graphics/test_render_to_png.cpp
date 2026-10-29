@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <filesystem>
+#include <optional>
 #include <vector>
 
 #include "graphics/render_to_png.hpp"
@@ -45,4 +47,24 @@ TEST(PlaceTileFlippedTest, ATileAboveTheBottomLandsHigherUp) {
                                          {.left = 0, .bottom = 2});
 
   EXPECT_EQ(image, Image({{5, 6}, {0, 0}, {0, 0}}));
+}
+
+TEST(WritePngTest, WritesTheImageAndForwardsTheRows) {
+  const auto file =
+      std::filesystem::temp_directory_path() / "write_png_written.png";
+  const RgbaImage image{
+      .size = {.width = 2, .height = 3},
+      .pixels = Image({{1, 2}, {3, 4}, {5, 6}}),
+  };
+  std::size_t rows = 0;
+
+  const auto error = WritePng(file, image, [&rows](std::size_t rows_written) {
+    rows = rows_written;
+    return true;
+  });
+
+  EXPECT_EQ(error, std::nullopt);
+  EXPECT_EQ(rows, 3U);
+  EXPECT_TRUE(std::filesystem::exists(file));
+  std::filesystem::remove(file);
 }

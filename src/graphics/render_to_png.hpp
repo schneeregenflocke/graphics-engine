@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstddef>
+#include <expected>
 #include <optional>
 #include <span>
 #include <string>
@@ -12,6 +13,7 @@
 
 #include "export_size.hpp"
 #include "graphics_engine.hpp"
+#include "png_writer.hpp"
 #include "rect.hpp"
 
 // One tile of the final image. The full picture is rendered in pieces because
@@ -67,7 +69,7 @@ class ImageComposer {
 
   ImageTile& TileAt(size_t column, size_t row);
 
-  [[nodiscard]] const std::vector<unsigned char>& Image() const;
+  [[nodiscard]] std::vector<unsigned char> TakeImage() &&;
 
   [[nodiscard]] size_t TileCount() const;
 
@@ -115,11 +117,26 @@ class ImageComposer {
   static constexpr size_t kMaxTileSize = 4096;
 };
 
-// Draws the calendar page as a PNG at the wanted resolution. It converts the
-// page's millimetre extent into a pixel size through the dpi, has ImageComposer
-// render it in tiles and png_io write it. The return: empty on success,
-// otherwise the display-ready reason nothing got written.
-[[nodiscard]] std::optional<std::string> WritePageToPng(
-    const std::string& file_path, const RectF& ortho_region, float dpi,
-    GraphicsEngine& graphics_engine, int msaa_samples);
+// An RGBA8 image, row-major with its origin top left.
+struct RgbaImage {
+  ImageSize size;
+  std::vector<unsigned char> pixels;
+};
+
+// Renders the calendar page at the wanted resolution: converts the page's
+// millimetre extent into a pixel size through the dpi and has ImageComposer
+// render it in tiles. The off-screen framebuffers come into being in the
+// current GL context, so the caller makes it current. The error is the
+// display-ready reason no image came out.
+[[nodiscard]] std::expected<RgbaImage, std::string> RenderPage(
+    const RectF& ortho_region, float dpi, GraphicsEngine& graphics_engine,
+    int msaa_samples);
+
+// Writes `image` as a PNG. It touches no GL, so it may run on any thread. The
+// return: empty on success, otherwise the display-ready reason nothing got
+// written.
+[[nodiscard]] std::optional<std::string> WritePng(
+    const std::string& file_path, const RgbaImage& image,
+    const png_io::RowProgress& progress = {});
+
 #endif  // RENDER_TO_PNG_HPP

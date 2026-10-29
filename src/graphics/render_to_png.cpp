@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <expected>
 #include <format>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_float4x4.hpp>
@@ -13,6 +14,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "export_size.hpp"
@@ -67,8 +69,8 @@ ImageTile& ImageComposer::TileAt(size_t column, size_t row) {
   return tiles_[column + (row * tile_columns_)];
 }
 
-const std::vector<unsigned char>& ImageComposer::Image() const {
-  return image_;
+std::vector<unsigned char> ImageComposer::TakeImage() && {
+  return std::move(image_);
 }
 
 size_t ImageComposer::TileCount() const { return tiles_.size(); }
@@ -210,32 +212,43 @@ void ImageComposer::RenderTiles() {
   }
 }
 
-std::optional<std::string> WritePageToPng(const std::string& file_path,
-                                          const RectF& ortho_region, float dpi,
-                                          GraphicsEngine& graphics_engine,
-                                          int msaa_samples) {
+std::expected<RgbaImage, std::string> RenderPage(
+    const RectF& ortho_region, float dpi, GraphicsEngine& graphics_engine,
+    int msaa_samples) {
   const auto image_size =
       ExportPixelSize(ortho_region.Width(), ortho_region.Height(), dpi);
   if (!image_size) {
     if (image_size.error() == ExportSizeError::kEmptySide) {
-      return std::format("The page of {} x {} mm has an empty side.",
-                         ortho_region.Width(), ortho_region.Height());
+      return std::unexpected(
+          std::format("The page of {} x {} mm has an empty side.",
+                      ortho_region.Width(), ortho_region.Height()));
     }
-    return std::format(
+    return std::unexpected(std::format(
         "The image of {} x {} mm at {} dpi exceeds the export limit of 4 GiB.",
-        ortho_region.Width(), ortho_region.Height(), dpi);
+        ortho_region.Width(), ortho_region.Height(), dpi));
   }
 
-  const ImageComposer composer(*image_size, ortho_region, graphics_engine,
-                               msaa_samples);
+  ImageComposer composer(*image_size, ortho_region, graphics_engine,
+                         msaa_samples);
   if (!composer.Rendered()) {
-    return "The off-screen framebuffer did not come up; nothing written.";
+    return std::unexpected(
+        "The off-screen framebuffer did not come up; nothing written.");
   }
-  const png_io::PngImageSize png_size{
-      .width = image_size->width,
-      .height = image_size->height,
+  return RgbaImage{
+      .size = *image_size,
+      .pixels = std::move(composer).TakeImage(),
   };
-  if (!png_io::WriteRgbaPng(file_path.c_str(), composer.Image(), png_size)) {
+}
+
+std::optional<std::string> WritePng(const std::string& file_path,
+                                    const RgbaImage& image,
+                                    const png_io::RowProgress& progress) {
+  const png_io::PngImageSize png_size{
+      .width = image.size.width,
+      .height = image.size.height,
+  };
+  if (!png_io::WriteRgbaPng(file_path.c_str(), image.pixels, png_size,
+                            progress)) {
     return "Writing " + file_path + " failed.";
   }
   return std::nullopt;
