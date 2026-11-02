@@ -18,7 +18,7 @@ ctest --test-dir build
 
 ### Gates
 
-CI runs the same commands in [build.yml](.forgejo/workflows/build.yml):
+`pre-commit install` runs the formatter and file checks on every commit. CI runs the same commands in [build.yml](.forgejo/workflows/build.yml):
 
 ```sh
 git ls-files '*.hpp' '*.cpp' | grep -v '^external/' | xargs clang-format --dry-run -Werror

@@ -1,0 +1,25 @@
+# Fast feedback before the push, after `pre-commit install`. CI stays binding.
+exclude: '^(external/|build/)'
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-yaml
+        # .clang-tidy and .clang-format look like YAML but have their own validators.
+        files: '\.(yaml|yml)$'
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: check-added-large-files
+        args: ['--maxkb=2048']
+
+  - repo: local
+    hooks:
+      - id: clang-format
+        name: clang-format
+        entry: clang-format -i
+        language: system
+        files: '\.(cpp|hpp|h)$'

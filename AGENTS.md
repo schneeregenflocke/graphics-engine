@@ -4,7 +4,7 @@ Guard rails for working on the engine code. Build and gates live in [README.md](
 
 ## Principles
 
-The engine follows the conventions of its first consumer, written once in [decade's AGENTS.md](https://github.com/schneeregenflocke/decade/blob/main/AGENTS.md): refactoring, naming, ownership, components, and the rule that warnings break the build and never get suppressed. Language and documentation rules live in the superproject.
+The engine follows the conventions of its first consumer, written once in [decade's AGENTS.md](https://github.com/schneeregenflocke/decade/blob/main/AGENTS.md): refactoring, naming, ownership, components, and the rule that warnings break the build and never get suppressed. Language and documentation rules live in [infra's AGENTS.md](https://github.com/schneeregenflocke/infra/blob/main/AGENTS.md).
 
 ## Architecture
 
